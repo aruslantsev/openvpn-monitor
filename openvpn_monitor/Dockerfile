@@ -6,7 +6,7 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache -r /app/requirements.txt
 
-COPY *.py /app/
+COPY *.py *.yaml /app/
 
 ENTRYPOINT ["dumb-init"] 
 CMD ["python", "-u", "/app/monitor.py"]
