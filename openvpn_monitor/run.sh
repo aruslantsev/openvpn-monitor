@@ -1,1 +1,1 @@
-docker run -d --name ovpn-monitor --restart=unless-stopped -e CONNECTION_STRING="mysql+mysqldb://user:password@mysql:3306/ovpnmonitor?charset=utf8mb4" -e HOST=myvpnhost -e PORT=7505 -p 8800:8888 ovpn-monitor:v1
+docker run -d --name ovpn-monitor --restart=unless-stopped -e CONNECTION_STRING="mysql+mysqldb://user:password@mysql:3306/ovpnmonitor?charset=utf8mb4" -p 8800:8888 ovpn-monitor:v1

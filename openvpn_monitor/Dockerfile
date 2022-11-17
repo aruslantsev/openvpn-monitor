@@ -6,8 +6,8 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache -r /app/requirements.txt
 
-COPY *.py *.yaml /app/
+COPY . .
 
 ENTRYPOINT ["dumb-init"] 
-CMD ["python", "-u", "/app/monitor.py"]
+CMD ["python", "-u", "monitor.py"]
 EXPOSE 8888

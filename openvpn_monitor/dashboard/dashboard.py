@@ -3,20 +3,15 @@ import os
 
 from dash import Dash, html, dcc, dash_table
 from dash.dependencies import Output, Input
+from openvpn_monitor.dashboard.const import timedeltas
 
-from functions import OVPNDataReader, OVPNSessionsReader, bytes_to_str, speed_to_str, get_sess_data
+from openvpn_monitor.dashboard.functions import OVPNDataReader, OVPNSessionsReader, bytes_to_str, speed_to_str, get_sess_data
 
 connection_string = os.environ['CONNECTION_STRING']
 
 datareader = OVPNDataReader(conn_string=connection_string, table="data")
 sessionreader = OVPNSessionsReader(conn_string=connection_string, table="sessions")
 
-timedeltas = {
-    "15m": datetime.timedelta(minutes=15),
-    "1h": datetime.timedelta(hours=1),
-    "12h": datetime.timedelta(hours=12),
-    "1d": datetime.timedelta(days=1),
-}
 
 app = Dash(__name__)
 app.title = "OpenVPN Monitor"
