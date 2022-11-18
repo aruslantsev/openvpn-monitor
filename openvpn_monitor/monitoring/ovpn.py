@@ -4,10 +4,12 @@ import telnetlib
 import time
 from typing import List, Dict, Tuple
 
+from openvpn_monitor.columns import RECEIVED, SENT
+from openvpn_monitor.const import ALL
 from openvpn_monitor.monitoring.data import SessionData, SessionBytes
 
 
-class OVPNMonitor:
+class OVPNMonitor(multiprocessing.Process):
     def __init__(
         self,
         *,
@@ -19,6 +21,7 @@ class OVPNMonitor:
         interval: int = 10,
         timeout: int = 5,
     ):
+        super().__init__(name=f"monitor:{host_alias}")
         self.host_alias = host_alias
         self.host = host
         self.port = port
@@ -108,25 +111,25 @@ class OVPNMonitor:
                 status_prev[sess].closed_at = timestamp_prev
                 self.sessions_queue.put((self.host_alias, status_prev[sess]))
 
-            user_dw_data = {'__ALL__': {'sent': 0, 'received': 0}}
+            user_dw_data = {'__ALL__': {SENT: 0, RECEIVED: 0}}
             for sess in active_sessions:
                 if status[sess].user not in user_dw_data:
-                    user_dw_data[status[sess].user] = {'sent': 0, 'received': 0}
+                    user_dw_data[status[sess].user] = {SENT: 0, RECEIVED: 0}
                 if sess in status_prev:
                     user_sent = status[sess].sent - status_prev[sess].sent
                     user_received = status[sess].received - status_prev[sess].received
                 else:
                     user_sent = status[sess].sent
                     user_received = status[sess].received
-                user_dw_data[status[sess].user]['sent'] += user_sent
-                user_dw_data[status[sess].user]['received'] += user_received
+                user_dw_data[status[sess].user][SENT] += user_sent
+                user_dw_data[status[sess].user][RECEIVED] += user_received
 
-                user_dw_data['__ALL__']['sent'] += user_sent
-                user_dw_data['__ALL__']['received'] += user_received
+                user_dw_data[ALL][SENT] += user_sent
+                user_dw_data[ALL][RECEIVED] += user_received
 
             if (
-                    (user_dw_data['__ALL__']['sent'] != 0)
-                    or (user_dw_data['__ALL__']['received'] != 0)
+                    (user_dw_data[ALL]['sent'] != 0)
+                    or (user_dw_data[ALL]['received'] != 0)
             ):
                 self.data_queue.put(
                     SessionBytes(

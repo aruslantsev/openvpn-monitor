@@ -3,9 +3,15 @@ import os
 
 from dash import Dash, html, dcc, dash_table
 from dash.dependencies import Output, Input
-from openvpn_monitor.dashboard.const import timedeltas
 
-from openvpn_monitor.dashboard.functions import OVPNDataReader, OVPNSessionsReader, bytes_to_str, speed_to_str, get_sess_data
+from openvpn_monitor.const import TIMEDELTAS
+from openvpn_monitor.dashboard.functions import (
+    OVPNDataReader,
+    OVPNSessionsReader,
+    bytes_to_str,
+    speed_to_str,
+    get_sess_data,
+)
 
 connection_string = os.environ['CONNECTION_STRING']
 
@@ -105,7 +111,7 @@ def traffic_updater(_):
         .sort_values('user')
     )
 
-    for time_prefix, timedelta in timedeltas.items():
+    for time_prefix, timedelta in TIMEDELTAS.items():
         data_tmp = data[data['timestamp_start'] >= (curr_date - timedelta).timestamp()]
 
         received = data_tmp.groupby('user')['received'].sum().reset_index()
@@ -143,7 +149,7 @@ def speed_updater(_):
         .sort_values('user')
     )
 
-    for time_prefix, timedelta in timedeltas.items():
+    for time_prefix, timedelta in TIMEDELTAS.items():
         data_tmp = data[data['timestamp_start'] >= (curr_date - timedelta).timestamp()]
 
         received = data_tmp.groupby('user')['received'].sum().reset_index()

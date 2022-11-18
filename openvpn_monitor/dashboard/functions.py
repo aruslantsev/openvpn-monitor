@@ -4,6 +4,19 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from openvpn_monitor.columns import (
+    USER,
+    IP,
+    INTERNAL_IP,
+    RECEIVED,
+    SENT,
+    CONNECTED_AT,
+    CLOSED_AT,
+    TIMESTAMP_START,
+    TIMESTAMP_END,
+)
+from openvpn_monitor.const import DATA_SPEEDS, DATA_SIZES
+
 
 class OVPNSessionsReader:
     def __init__(self, conn_string, table):
@@ -16,22 +29,22 @@ class OVPNSessionsReader:
         # engine = create_engine(self.conn_string, pool_recycle=1800)
         query = (
             f"""SELECT 
-                    user, 
-                    ip, 
-                    internal_ip, 
-                    received, 
-                    sent, 
-                    connected_at, 
-                    closed_at
+                    {USER}, 
+                    {IP}, 
+                    {INTERNAL_IP}, 
+                    {RECEIVED}, 
+                    {SENT}, 
+                    {CONNECTED_AT}, 
+                    {CLOSED_AT}
                 FROM {self.table} 
             """
         )
         if connected_at_min is not None:
             query += (
-                f"""WHERE connected_at >= {connected_at_min}
+                f"""WHERE {CONNECTED_AT} >= {connected_at_min}
                  """
             )
-        query += """ORDER BY connected_at DESC 
+        query += f"""ORDER BY {CONNECTED_AT} DESC 
                  """
         if limit is not None:
             query += (
@@ -44,7 +57,7 @@ class OVPNSessionsReader:
 
         return pd.DataFrame(
             result,
-            columns=['user', 'ip', 'internal_ip', 'received', 'sent', 'connected_at', 'closed_at']
+            columns=[USER, IP, INTERNAL_IP, RECEIVED, SENT, CONNECTED_AT, CLOSED_AT,]
         )
 
 
@@ -59,20 +72,20 @@ class OVPNDataReader:
         # engine = create_engine(self.conn_string, pool_recycle=1800)
         query = (
             f"""SELECT 
-                    timestamp_start, 
-                    timestamp_end, 
-                    user, 
-                    received,
-                    sent 
+                    {TIMESTAMP_START}, 
+                    {TIMESTAMP_END}, 
+                    {USER}, 
+                    {RECEIVED},
+                    {SENT} 
                 FROM {self.table} 
             """
         )
         if connected_at_min is not None:
             query += (
-                f"""WHERE timestamp_start >= {connected_at_min} 
+                f"""WHERE {TIMESTAMP_START} >= {connected_at_min} 
                  """
             )
-        query += """ORDER BY timestamp_start DESC 
+        query += f"""ORDER BY {TIMESTAMP_START} DESC 
                  """
         if limit is not None:
             query += (
@@ -85,7 +98,7 @@ class OVPNDataReader:
 
         return pd.DataFrame(
             result,
-            columns=['timestamp_start', 'timestamp_end', 'user', 'received', 'sent', ]
+            columns=[TIMESTAMP_START, TIMESTAMP_END, USER, RECEIVED, SENT,]
         )
 
 
@@ -104,7 +117,7 @@ def bytes_to_str(x):
     if x is None:
         return x
 
-    sizes = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"]
+    sizes = DATA_SIZES
     denominator = 1024
 
     i = 0
@@ -121,7 +134,7 @@ def bytes_to_str(x):
 def speed_to_str(x):
     if x is None:
         return None
-    sizes = ["B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", "PiB/s"]
+    sizes = DATA_SPEEDS
     denominator = 1024
 
     i = 0
