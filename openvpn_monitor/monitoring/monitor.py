@@ -27,7 +27,7 @@ class Monitor:
                 OVPNMonitor(
                     host_alias=host,
                     host=conf['host'],
-                    port=conf['port'],
+                    port=conf['monitoring_port'],
                     sessions_queue=self.sessions_queue,
                     data_queue=self.data_queue,
                     interval=interval,
