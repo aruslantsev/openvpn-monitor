@@ -50,7 +50,7 @@ def run_monitor(
     )
     syslog.openlog(ident="ovpn-monitor", facility=syslog.LOG_DAEMON)
 
-    print("Starting processes")
+    print("Starting processes", flush=True)
     for process in processes:
         process.start()
 
