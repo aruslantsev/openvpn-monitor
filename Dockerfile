@@ -8,6 +8,7 @@ RUN apt update \
 
 COPY . .
 
+ENV PYTHONPATH=.
 ENTRYPOINT ["dumb-init"] 
-CMD ["python", "-u", "monitor.py"]
+CMD ["python", "-u", "openvpn_monitor/jobs/run.py"]
 EXPOSE 8888

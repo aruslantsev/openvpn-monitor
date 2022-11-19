@@ -1,2 +1,2 @@
 #!/bin/bash
-docker build -t ovpn-monitor:v1 .
+docker build -t ovpn-monitor:v2 .
