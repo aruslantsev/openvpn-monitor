@@ -29,6 +29,7 @@ def main():
         timeout=min(timeout, interval)
     )
 
+    print("Starting monitor")
     processes.append(
         multiprocessing.Process(target=run_monitor, name="monitor", kwargs=kwargs)
     )
