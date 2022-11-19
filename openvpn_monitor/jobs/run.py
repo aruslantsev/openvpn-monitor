@@ -10,7 +10,8 @@ from openvpn_monitor.monitoring.monitor import Monitor
 
 
 def main():
-    config = yaml.safe_dump("/config.yaml")
+    with open("/config.yaml") as fd:
+        config = yaml.safe_load(fd)
     connection_string = os.environ["CONNECTION_STRING"]
     interval = int(os.environ.get("INTERVAL", "60"))
     timeout = int(os.environ.get("TIMEOUT", "5"))
