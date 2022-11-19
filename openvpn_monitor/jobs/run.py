@@ -1,7 +1,6 @@
 import multiprocessing
 import os
 import sys
-import syslog
 import time
 
 import yaml
@@ -42,7 +41,7 @@ def main():
 
     while True:
         if not all([process.is_alive() for process in processes]):
-            syslog.syslog(syslog.LOG_ERR, "Some processes died")
+            print("Some processes died", flush=True)
             for process in processes:
                 if process.is_alive():
                     process.terminate()

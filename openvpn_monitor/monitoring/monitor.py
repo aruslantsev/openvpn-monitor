@@ -1,6 +1,5 @@
 import multiprocessing
 import sys
-import syslog
 import time
 from typing import Dict, Any
 
@@ -48,7 +47,6 @@ def run_monitor(
             table=sessions_table,
         )
     )
-    syslog.openlog(ident="ovpn-monitor", facility=syslog.LOG_DAEMON)
 
     print("Starting processes", flush=True)
     for process in processes:
@@ -56,7 +54,7 @@ def run_monitor(
 
     while True:
         if not all([process.is_alive() for process in processes]):
-            syslog.syslog(syslog.LOG_ERR, "Monitor: some processes died")
+            print("Monitor: some processes died", flush=True)
             for process in processes:
                 if process.is_alive():
                     process.terminate()

@@ -1,5 +1,4 @@
 import multiprocessing
-import syslog
 import telnetlib
 import time
 from typing import List, Dict, Tuple
@@ -51,12 +50,10 @@ class OVPNMonitor(multiprocessing.Process):
 
             return status
         except EOFError as e:
-            syslog.syslog(
-                syslog.LOG_ERR,
-                (
-                    f"{self.host_alias}: Got {e.__repr__()} when tried to fetch data "
-                    f"from the monitoring port for {self.host}:{self.port}"
-                )
+            print(
+                f"{self.host_alias}: Got {e.__repr__()} when tried to fetch data "
+                f"from the monitoring port for {self.host}:{self.port}",
+                flush=True
             )
             return []
 
@@ -92,7 +89,7 @@ class OVPNMonitor(multiprocessing.Process):
     def run(
         self,
     ):
-        syslog.syslog(syslog.LOG_INFO, f'Started monitoring for host {self.host_alias}...')
+        print(f'Started monitoring for host {self.host_alias}...', flush=True)
         timestamp = int(time.time())
         status = {}
 
@@ -144,7 +141,7 @@ class OVPNMonitor(multiprocessing.Process):
             if time_wait > 0:
                 time.sleep(time_wait)
             else:
-                syslog.syslog(syslog.LOG_WARNING, 'Not enough time to collect stats')
+                print('Not enough time to collect stats', flush=True)
 
 
 class SimpleReader:
