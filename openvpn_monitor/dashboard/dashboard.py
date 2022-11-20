@@ -81,19 +81,32 @@ app.layout = html.Div(
         ),
         html.Br(),
 
-        html.H4(children="Traffic since month start"),
-        dash_table.DataTable(
-            id=TRAFFIC_SINCE_MONTH_START_TABLE,
-            cell_selectable=False,
-            fill_width=False,
-        ),
-        html.Br(),
-
-        html.H4(children="Active users"),
-        dash_table.DataTable(
-            id=ACTIVE_USERS_TABLE,
-            cell_selectable=False,
-            fill_width=False,
+        html.Div(
+            children=[
+                html.Div(
+                    children=[
+                        html.H4(children="Traffic since month start"),
+                        dash_table.DataTable(
+                            id=TRAFFIC_SINCE_MONTH_START_TABLE,
+                            cell_selectable=False,
+                            fill_width=False,
+                        ),
+                    ],
+                    style={'padding': 10, 'flex': 1}
+                ),
+                html.Div(
+                    children=[
+                        html.H4(children="Active users"),
+                        dash_table.DataTable(
+                            id=ACTIVE_USERS_TABLE,
+                            cell_selectable=False,
+                            fill_width=False,
+                        ),
+                    ],
+                    style={'padding': 10, 'flex': 1}
+                )
+            ],
+            style={'display': 'flex', 'flex-direction': 'row'}
         ),
         html.Br(),
 
@@ -266,7 +279,7 @@ def active_users_table(host, _):
         host=host,
         connected_at_min=datetime.datetime.now() - datetime.timedelta(minutes=5)
     )
-    users = data[[USER]].drop_duplicates()
+    users = data[[USER, HOST]].drop_duplicates()
     users = users[users[USER] != ALL].reset_index(drop=True)
 
     return users.to_dict("records")
