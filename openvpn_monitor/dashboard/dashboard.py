@@ -1,19 +1,17 @@
 import datetime
 import os
 
-import pandas as pd
 from dash import Dash, html, dcc, dash_table
 from dash.dependencies import Output, Input
 
-from openvpn_monitor.const import TIMEDELTAS, ALL
 from openvpn_monitor.columns import (
     HOST,
     USER,
     SENT,
     RECEIVED,
     TIMESTAMP_START,
-    TIMESTAMP_END,
 )
+from openvpn_monitor.const import TIMEDELTAS, ALL
 from openvpn_monitor.dashboard.functions import (
     bytes_to_str,
     speed_to_str,
@@ -25,7 +23,6 @@ from openvpn_monitor.dashboard.sql import (
     OVPNHostsReader,
 )
 from openvpn_monitor.tables import DATA_TABLE, SESSIONS_TABLE
-
 
 connection_string = os.environ['CONNECTION_STRING']
 
@@ -44,51 +41,78 @@ TRAFFIC_FOR_TIME_PERIOD_TABLE = "traffic_for_time_period_table"
 SPEED_FOR_TIME_PERIOD_TABLE = "speed_for_time_period_table"
 CLOSED_SESSIONS_TABLE = "closed_sessions_table"
 
-app.layout = html.Div(children=[
-    dcc.Interval(
-        id=TIMER,
-        interval=60 * 1000  # ms
-    ),
+app.layout = html.Div(
+    children=[
+        dcc.Interval(
+            id=TIMER,
+            interval=60 * 1000  # ms
+        ),
 
-    html.H3(children='OpenVPN monitoring'),
+        html.H3(children='OpenVPN monitoring'),
+        html.Br(),
 
-    html.H4(children="Time period"),
-    dcc.Dropdown(id=TIME_PERIOD_SELECTOR, options=list(TIMEDELTAS.keys())),
+        html.Div(
+            children=[
+                html.Div(
+                    children=[
+                        html.H4(children="Time period"),
+                        dcc.Dropdown(
+                            id=TIME_PERIOD_SELECTOR,
+                            options=list(TIMEDELTAS.keys()),
+                            placeholder="Select time period"
+                        ),
+                    ],
+                    style={'padding': 10, 'flex': 1}
+                ),
+                html.Div(
+                    children=[
+                        html.H4(children="Hosts"),
+                        dcc.Dropdown(id=HOST_SELECTOR, placeholder="Select OpenVPN server"),
+                    ],
+                    style={'padding': 10, 'flex': 1}
+                ),
+            ],
+            style={'display': 'flex', 'flex-direction': 'row'}
+        ),
+        html.Br(),
 
-    html.H4(children="Hosts"),
-    dcc.Dropdown(id=HOST_SELECTOR),
+        html.H4(children="Traffic since month start"),
+        dash_table.DataTable(
+            id=TRAFFIC_SINCE_MONTH_START_TABLE,
+            cell_selectable=False,
+            fill_width=False,
+        ),
+        html.Br(),
 
-    html.H4(children="Traffic since month start"),
-    dash_table.DataTable(
-        id=TRAFFIC_SINCE_MONTH_START_TABLE,
-        cell_selectable=False,
-        fill_width=False,
-    ),
+        html.H4(children="Active users"),
+        dash_table.DataTable(
+            id=ACTIVE_USERS_TABLE,
+            cell_selectable=False,
+            fill_width=False,
+        ),
+        html.Br(),
 
-    html.H4(children="Active users"),
-    dash_table.DataTable(
-        id=ACTIVE_USERS_TABLE,
-        cell_selectable=False,
-        fill_width=False,
-    ),
+        html.H4(children="Traffic"),
+        dash_table.DataTable(
+            id=TRAFFIC_FOR_TIME_PERIOD_TABLE,
+            cell_selectable=False,
+            # fill_width=False,
+        ),
+        html.Br(),
 
-    html.H4(children="Traffic"),
-    dash_table.DataTable(
-        id=TRAFFIC_FOR_TIME_PERIOD_TABLE,
-        cell_selectable=False,
-        # fill_width=False,
-    ),
+        html.H4(children="Average speed"),
+        dash_table.DataTable(
+            id=SPEED_FOR_TIME_PERIOD_TABLE,
+            cell_selectable=False,
+            # fill_width=False,
+        ),
+        html.Br(),
 
-    html.H4(children="Average speed"),
-    dash_table.DataTable(
-        id=SPEED_FOR_TIME_PERIOD_TABLE,
-        cell_selectable=False,
-        # fill_width=False,
-    ),
-
-    html.H4(children="Latest closed sessions"),
-    dash_table.DataTable(id=CLOSED_SESSIONS_TABLE),
-])
+        html.H4(children="Latest closed sessions"),
+        dash_table.DataTable(id=CLOSED_SESSIONS_TABLE),
+        html.Br(),
+    ]
+)
 
 
 @app.callback(
