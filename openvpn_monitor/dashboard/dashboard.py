@@ -1,83 +1,117 @@
 import datetime
 import os
 
+import pandas as pd
 from dash import Dash, html, dcc, dash_table
 from dash.dependencies import Output, Input
 
-from openvpn_monitor.const import TIMEDELTAS
+from openvpn_monitor.const import TIMEDELTAS, ALL
+from openvpn_monitor.columns import (
+    USER,
+    SENT,
+    RECEIVED,
+    TIMESTAMP_START,
+    TIMESTAMP_END,
+)
 from openvpn_monitor.dashboard.functions import (
-    OVPNDataReader,
-    OVPNSessionsReader,
     bytes_to_str,
     speed_to_str,
     get_sess_data,
 )
-
+from openvpn_monitor.dashboard.sql import (
+    OVPNDataReader,
+    OVPNSessionsReader,
+    OVPNHostsReader,
+)
 from openvpn_monitor.tables import DATA_TABLE, SESSIONS_TABLE
+
 
 connection_string = os.environ['CONNECTION_STRING']
 
 datareader = OVPNDataReader(conn_string=connection_string, table=DATA_TABLE)
 sessionreader = OVPNSessionsReader(conn_string=connection_string, table=SESSIONS_TABLE)
+hostsreader = OVPNHostsReader(conn_string=connection_string, table=SESSIONS_TABLE)
 
 app = Dash(__name__, title="OpenVPN Monitor")
 
+TIMER = "timer"
+TIME_PERIOD_SELECTOR = "time_period_selector"
+HOST_SELECTOR = "host_selector"
+TRAFFIC_SINCE_MONTH_START_TABLE = "traffic_since_month_start_table"
+ACTIVE_USERS_TABLE = "active_users_table"
+TRAFFIC_FOR_TIME_PERIOD_TABLE = "traffic_for_time_period_table"
+SPEED_FOR_TIME_PERIOD_TABLE = "speed_for_time_period_table"
+CLOSED_SESSIONS_TABLE = "closed_sessions_table"
+
 app.layout = html.Div(children=[
+    dcc.Interval(
+        id=TIMER,
+        interval=60 * 1000  # ms
+    ),
+
     html.H3(children='OpenVPN monitoring'),
 
     html.H4(children="Time period"),
-    dcc.Dropdown(list(TIMEDELTAS.keys())),
+    dcc.Dropdown(id=TIME_PERIOD_SELECTOR, options=list(TIMEDELTAS.keys())),
 
     html.H4(children="Hosts"),
-    dcc.Dropdown(list(TIMEDELTAS.keys())),
+    dcc.Dropdown(id=HOST_SELECTOR),
 
     html.H4(children="Traffic since month start"),
     dash_table.DataTable(
-        id="traffic-month",
+        id=TRAFFIC_SINCE_MONTH_START_TABLE,
         cell_selectable=False,
         fill_width=False,
     ),
 
     html.H4(children="Active users"),
     dash_table.DataTable(
-        id="active-users",
+        id=ACTIVE_USERS_TABLE,
         cell_selectable=False,
         fill_width=False,
     ),
 
     html.H4(children="Traffic"),
     dash_table.DataTable(
-        id="traffic",
+        id=TRAFFIC_FOR_TIME_PERIOD_TABLE,
         cell_selectable=False,
         # fill_width=False,
     ),
 
     html.H4(children="Average speed"),
     dash_table.DataTable(
-        id="speed",
+        id=SPEED_FOR_TIME_PERIOD_TABLE,
         cell_selectable=False,
         # fill_width=False,
     ),
 
     html.H4(children="Latest closed sessions"),
-    dash_table.DataTable(id='sessions'),
-
-    dcc.Interval(
-        id='interval-component',
-        interval=600 * 1000  # ms
-    ),
+    dash_table.DataTable(id=CLOSED_SESSIONS_TABLE),
 ])
 
 
 @app.callback(
-    Output('traffic-month', 'data'),
-    Input('interval-component', 'n_intervals')
+    Output(HOST_SELECTOR, "options"),
+    Input(TIME_PERIOD_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
 )
-def traffic_1month_updater(_):
+def get_hosts(timedelta_str, _):
+    timedelta = TIMEDELTAS[timedelta_str]
+    return [ALL] + hostsreader(timedelta=timedelta)
+
+
+@app.callback(
+    Output(TRAFFIC_SINCE_MONTH_START_TABLE, "data"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
+)
+def traffic_month_start_updater(host, _):
+    if host == ALL:
+        host = None
     curr_date = datetime.datetime.now()
     start_date = datetime.datetime(
         year=curr_date.year, month=curr_date.month, day=1, hour=0, minute=0, second=0)
-    data = datareader(connected_at_min=start_date.timestamp())
+    data = datareader(host=host, connected_at_min=start_date)
 
     users = (
         data[['user']]
@@ -102,107 +136,121 @@ def traffic_1month_updater(_):
 
 
 @app.callback(
-    Output('traffic', 'data'),
-    Input('interval-component', 'n_intervals')
+    Output(TRAFFIC_FOR_TIME_PERIOD_TABLE, "data"),
+    Input(TIME_PERIOD_SELECTOR, "value"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
 )
-def traffic_updater(_):
+def traffic_updater(timedelta_str, host, _):
+    if host == ALL:
+        host = None
+
     curr_date = datetime.datetime.now()
-    start_date = curr_date - datetime.timedelta(days=1)
-    data = datareader(connected_at_min=start_date.timestamp())
+    timedelta = TIMEDELTAS[timedelta_str]
+    if timedelta is not None:
+        start_date = curr_date - TIMEDELTAS[timedelta_str]
+    else:
+        start_date = None
+    data = datareader(connected_at_min=start_date, host=host)
 
     users = (
-        data[['user']]
+        data[[USER]]
         .drop_duplicates()
         .reset_index(drop=True)
-        .sort_values('user')
+        .sort_values(USER)
     )
 
-    for time_prefix, timedelta in TIMEDELTAS.items():
-        data_tmp = data[data['timestamp_start'] >= (curr_date - timedelta).timestamp()]
+    received = data.groupby(USER)[RECEIVED].sum().reset_index()
+    sent = data.groupby(USER)[SENT].sum().reset_index()
 
-        received = data_tmp.groupby('user')['received'].sum().reset_index()
-        sent = data_tmp.groupby('user')['sent'].sum().reset_index()
+    received[RECEIVED] = received[RECEIVED].map(bytes_to_str)
+    sent[SENT] = sent[SENT].map(bytes_to_str)
 
-        received['received'] = received['received'].map(bytes_to_str)
-        sent['sent'] = sent['sent'].map(bytes_to_str)
-
-        received = received.rename(columns={"received": f"received_{time_prefix}"})
-        sent = sent.rename(columns={"sent": f"sent_{time_prefix}"})
-
-        users = (
-            users
-            .merge(received, how="left", on="user")
-            .merge(sent, how="left", on="user")
-            .rename(columns={"received": f"received_{time_prefix}", "sent": f"sent_{time_prefix}"})
-        )
+    users = (
+        users
+        .merge(received, how="left", on="user")
+        .merge(sent, how="left", on="user")
+    )
 
     return users.to_dict("records")
 
 
 @app.callback(
-    Output('speed', 'data'),
-    Input('interval-component', 'n_intervals')
+    Output(SPEED_FOR_TIME_PERIOD_TABLE, "data"),
+    Input(TIME_PERIOD_SELECTOR, "value"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
 )
-def speed_updater(_):
+def speed_updater(timedelta_str, host, _):
+    if host == ALL:
+        host = None
+
     curr_date = datetime.datetime.now()
-    start_date = curr_date - datetime.timedelta(days=1)
-    data = datareader(connected_at_min=start_date.timestamp())
+    timedelta = TIMEDELTAS[timedelta_str]
+    if timedelta is not None:
+        start_date = curr_date - TIMEDELTAS[timedelta_str]
+    else:
+        start_date = None
+
+    data = datareader(connected_at_min=start_date, host=host)
 
     users = (
-        data[['user']]
+        data[[USER]]
         .drop_duplicates()
         .reset_index(drop=True)
-        .sort_values('user')
+        .sort_values(USER)
     )
 
-    for time_prefix, timedelta in TIMEDELTAS.items():
-        data_tmp = data[data['timestamp_start'] >= (curr_date - timedelta).timestamp()]
+    received = data.groupby(USER)[RECEIVED].sum().reset_index()
+    sent = data.groupby(USER)[SENT].sum().reset_index()
 
-        received = data_tmp.groupby('user')['received'].sum().reset_index()
-        sent = data_tmp.groupby('user')['sent'].sum().reset_index()
+    if timedelta is not None:
+        seconds = timedelta.total_seconds()
+    else:
+        seconds = datetime.datetime.now().timestamp() - data[TIMESTAMP_START].min()
 
-        seconds = timedelta.seconds
-        if time_prefix == "1d":
-            seconds = 86400
+    received[RECEIVED] = received[RECEIVED] / seconds
+    sent[SENT] = sent[SENT] / seconds
 
-        received['received'] = received['received'] / seconds
-        sent['sent'] = sent['sent'] / seconds
+    received[RECEIVED] = received[RECEIVED].map(speed_to_str)
+    sent[SENT] = sent[SENT].map(speed_to_str)
 
-        received['received'] = received['received'].map(speed_to_str)
-        sent['sent'] = sent['sent'].map(speed_to_str)
-
-        received = received.rename(columns={"received": f"received_{time_prefix}"})
-        sent = sent.rename(columns={"sent": f"sent_{time_prefix}"})
-
-        users = (
-            users
-            .merge(received, how="left", on="user")
-            .merge(sent, how="left", on="user")
-            .rename(columns={"received": f"received_{time_prefix}", "sent": f"sent_{time_prefix}"})
-        )
+    users = (
+        users
+        .merge(received, how="left", on="user")
+        .merge(sent, how="left", on="user")
+    )
 
     return users.to_dict("records")
 
 
 @app.callback(
-    Output('active-users', 'data'),
-    Input('interval-component', 'n_intervals')
+    Output(ACTIVE_USERS_TABLE, "data"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
 )
-def users_updater(_):
+def users_updater(host, _):
+    if host == ALL:
+        host = None
     data = datareader(
-        connected_at_min=(datetime.datetime.now() - datetime.timedelta(minutes=1)).timestamp())
-    users = data[['user']].drop_duplicates()
-    users = users[users['user'] != "__ALL__"].reset_index(drop=True)
+        host=host,
+        connected_at_min=datetime.datetime.now() - datetime.timedelta(minutes=5)
+    )
+    users = data[[USER]].drop_duplicates()
+    users = users[users[USER] != ALL].reset_index(drop=True)
 
     return users.to_dict("records")
 
 
 @app.callback(
-    Output('sessions', 'data'),
-    Input('interval-component', 'n_intervals')
+    Output(CLOSED_SESSIONS_TABLE, "data"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
 )
-def update_sent_graph(_):
-    sessions = sessionreader(limit=10)
+def update_sent_graph(host, _):
+    if host == ALL:
+        host = None
+    sessions = sessionreader(host=host, limit=20)
     sessions = get_sess_data(sessions)
 
     return sessions.to_dict("records")
