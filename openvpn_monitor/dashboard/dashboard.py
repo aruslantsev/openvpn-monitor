@@ -61,6 +61,7 @@ app.layout = html.Div(
                             options=list(TIMEDELTAS.keys()),
                             placeholder="Select time period",
                             value="inf",
+                            clearable=False,
                         ),
                     ],
                     style={'padding': 10, 'flex': 1}
@@ -71,7 +72,8 @@ app.layout = html.Div(
                         dcc.Dropdown(
                             id=HOST_SELECTOR,
                             placeholder="Select OpenVPN server",
-                            value=ALL
+                            value=ALL,
+                            clearable=False,
                         ),
                     ],
                     style={'padding': 10, 'flex': 1}
