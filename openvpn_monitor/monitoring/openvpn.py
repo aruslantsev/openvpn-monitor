@@ -106,7 +106,7 @@ class OVPNMonitor(multiprocessing.Process):
 
             for sess in expired_sessions:
                 status_prev[sess].closed_at = timestamp_prev
-                self.sessions_queue.put((self.host_alias, status_prev[sess]))
+                self.sessions_queue.put(status_prev[sess])
 
             user_dw_data = {'__ALL__': {SENT: 0, RECEIVED: 0}}
             for sess in active_sessions:
