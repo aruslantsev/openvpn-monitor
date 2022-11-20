@@ -13,17 +13,23 @@ from openvpn_monitor.dashboard.functions import (
     get_sess_data,
 )
 
+from openvpn_monitor.tables import DATA_TABLE, SESSIONS_TABLE
+
 connection_string = os.environ['CONNECTION_STRING']
 
-datareader = OVPNDataReader(conn_string=connection_string, table="data")
-sessionreader = OVPNSessionsReader(conn_string=connection_string, table="sessions")
+datareader = OVPNDataReader(conn_string=connection_string, table=DATA_TABLE)
+sessionreader = OVPNSessionsReader(conn_string=connection_string, table=SESSIONS_TABLE)
 
-
-app = Dash(__name__)
-app.title = "OpenVPN Monitor"
+app = Dash(__name__, title="OpenVPN Monitor")
 
 app.layout = html.Div(children=[
     html.H3(children='OpenVPN monitoring'),
+
+    html.H4(children="Time period"),
+    dcc.Dropdown(list(TIMEDELTAS.keys())),
+
+    html.H4(children="Hosts"),
+    dcc.Dropdown(list(TIMEDELTAS.keys())),
 
     html.H4(children="Traffic since month start"),
     dash_table.DataTable(
@@ -200,7 +206,3 @@ def update_sent_graph(_):
     sessions = get_sess_data(sessions)
 
     return sessions.to_dict("records")
-
-
-if __name__ == '__main__':
-    app.run_server(port=8888, host="0.0.0.0", )

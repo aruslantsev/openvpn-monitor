@@ -10,5 +10,5 @@ COPY . .
 
 ENV PYTHONPATH=.
 ENTRYPOINT ["dumb-init"] 
-CMD ["python", "-u", "openvpn_monitor/jobs/run.py"]
+CMD ["python", "-u", "openvpn_monitor/run.py"]
 EXPOSE 8888

@@ -7,6 +7,9 @@ import yaml
 
 from openvpn_monitor.monitoring.monitor import monitor
 
+from openvpn_monitor.tables import SESSIONS_TABLE, DATA_TABLE
+from openvpn_monitor.dashboard.dashboard import app
+
 
 def main():
     with open("/config.yaml") as fd:
@@ -15,26 +18,34 @@ def main():
     interval = int(os.environ.get("INTERVAL", "60"))
     timeout = int(os.environ.get("TIMEOUT", "5"))
 
-    sessions_table = "sessions"
-    data_table = "data"
-
     processes = []
-    kwargs = dict(
-        hosts=config["hosts"],
-        connection_string=connection_string,
-        data_table=data_table,
-        sessions_table=sessions_table,
-        interval=interval,
-        timeout=min(timeout, interval)
-    )
 
     print("Starting monitor", flush=True)
     processes.append(
-        multiprocessing.Process(target=monitor, name="monitor", kwargs=kwargs)
+        multiprocessing.Process(
+            target=monitor,
+            name="monitor",
+            kwargs={
+                "hosts": config["hosts"],
+                "connection_string": connection_string,
+                "data_table": DATA_TABLE,
+                "sessions_table": SESSIONS_TABLE,
+                "interval": interval,
+                "timeout": min(timeout, interval),
+            }
+        )
     )
 
-    # server_p = multiprocessing.Process(target=app.run_server,
-    #                                    kwargs={'host': "0.0.0.0", 'port': 8888})
+    processes.append(
+        multiprocessing.Process(
+            target=app.run_server,
+            name="webserver",
+            kwargs={
+                "host": "0.0.0.0",
+                "port": 8888,
+            }
+        )
+    )
 
     for process in processes:
         process.start()
