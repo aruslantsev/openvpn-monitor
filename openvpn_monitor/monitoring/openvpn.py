@@ -89,7 +89,7 @@ class OVPNMonitor(multiprocessing.Process):
     def run(
         self,
     ):
-        print(f'Started monitoring for host {self.host_alias}...', flush=True)
+        print(f'Started monitoring for host {self.host_alias}', flush=True)
         timestamp = int(time.time())
         status = {}
 

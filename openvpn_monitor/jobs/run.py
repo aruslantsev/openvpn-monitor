@@ -5,7 +5,7 @@ import time
 
 import yaml
 
-from openvpn_monitor.monitoring.monitor import run_monitor
+from openvpn_monitor.monitoring.monitor import monitor
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
 
     print("Starting monitor", flush=True)
     processes.append(
-        multiprocessing.Process(target=run_monitor, name="monitor", kwargs=kwargs)
+        multiprocessing.Process(target=monitor, name="monitor", kwargs=kwargs)
     )
 
     # server_p = multiprocessing.Process(target=app.run_server,

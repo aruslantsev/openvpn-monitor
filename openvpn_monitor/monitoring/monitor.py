@@ -3,11 +3,11 @@ import sys
 import time
 from typing import Dict, Any
 
-from openvpn_monitor.monitoring.ovpn import OVPNMonitor
+from openvpn_monitor.monitoring.openvpn import OVPNMonitor
 from openvpn_monitor.monitoring.sql import OVPNSessionsWriter, OVPNDataWriter
 
 
-def run_monitor(
+def monitor(
     *,
     hosts: Dict[str, Dict[str, Any]],
     connection_string: str,
