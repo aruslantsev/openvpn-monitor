@@ -34,16 +34,11 @@ class OVPNHostsReader:
         self,
         timedelta: Optional[datetime.timedelta] = None
     ) -> List[str]:
-        query = (
-            f"""
-            SELECT DISTINCT {HOST}
-            FROM {self.table} 
-            """
-        )
+        query = f"""SELECT DISTINCT {HOST} FROM {self.table} """
 
         if timedelta is not None:
             min_timestamp = (datetime.datetime.now() - timedelta).timestamp()
-            query += f"""WHERE {CONNECTED_AT} >= {min_timestamp}"""
+            query += f""" WHERE {CONNECTED_AT} >= {min_timestamp} """
 
         with Session(self.engine) as session:
             result = session.execute(query).fetchall()

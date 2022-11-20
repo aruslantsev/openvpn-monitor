@@ -7,6 +7,7 @@ from dash.dependencies import Output, Input
 
 from openvpn_monitor.const import TIMEDELTAS, ALL
 from openvpn_monitor.columns import (
+    HOST,
     USER,
     SENT,
     RECEIVED,
@@ -95,7 +96,7 @@ app.layout = html.Div(children=[
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
 )
-def get_hosts(timedelta_str, _):
+def all_hosts_update(timedelta_str, _):
     timedelta = TIMEDELTAS[timedelta_str]
     return [ALL] + hostsreader(timedelta=timedelta)
 
@@ -105,7 +106,7 @@ def get_hosts(timedelta_str, _):
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
 )
-def traffic_month_start_updater(host, _):
+def traffic_since_month_start_table(host, _):
     if host == ALL:
         host = None
     curr_date = datetime.datetime.now()
@@ -114,23 +115,23 @@ def traffic_month_start_updater(host, _):
     data = datareader(host=host, connected_at_min=start_date)
 
     users = (
-        data[['user']]
+        data[[HOST, USER]]
         .drop_duplicates()
         .reset_index(drop=True)
         .sort_values('user')
     )
 
-    received = data.groupby('user')['received'].sum().reset_index()
-    sent = data.groupby('user')['sent'].sum().reset_index()
+    received = data.groupby([HOST, USER])[RECEIVED].sum().reset_index()
+    sent = data.groupby([HOST, USER])[SENT].sum().reset_index()
 
     users = (
         users
-        .merge(received, how="left", on="user")
-        .merge(sent, how="left", on="user")
+        .merge(received, how="left", on=[HOST, USER])
+        .merge(sent, how="left", on=[HOST, USER])
     )
 
-    users['received'] = users['received'].map(bytes_to_str)
-    users['sent'] = users['sent'].map(bytes_to_str)
+    users[RECEIVED] = users[RECEIVED].map(bytes_to_str)
+    users[SENT] = users[SENT].map(bytes_to_str)
 
     return users.to_dict("records")
 
@@ -141,7 +142,7 @@ def traffic_month_start_updater(host, _):
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
 )
-def traffic_updater(timedelta_str, host, _):
+def traffic_for_time_period_table(timedelta_str, host, _):
     if host == ALL:
         host = None
 
@@ -154,22 +155,22 @@ def traffic_updater(timedelta_str, host, _):
     data = datareader(connected_at_min=start_date, host=host)
 
     users = (
-        data[[USER]]
+        data[[HOST, USER]]
         .drop_duplicates()
         .reset_index(drop=True)
         .sort_values(USER)
     )
 
-    received = data.groupby(USER)[RECEIVED].sum().reset_index()
-    sent = data.groupby(USER)[SENT].sum().reset_index()
+    received = data.groupby([HOST, USER])[RECEIVED].sum().reset_index()
+    sent = data.groupby([HOST, USER])[SENT].sum().reset_index()
 
     received[RECEIVED] = received[RECEIVED].map(bytes_to_str)
     sent[SENT] = sent[SENT].map(bytes_to_str)
 
     users = (
         users
-        .merge(received, how="left", on="user")
-        .merge(sent, how="left", on="user")
+        .merge(received, how="left", on=[HOST, USER])
+        .merge(sent, how="left", on=[HOST, USER])
     )
 
     return users.to_dict("records")
@@ -181,7 +182,7 @@ def traffic_updater(timedelta_str, host, _):
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
 )
-def speed_updater(timedelta_str, host, _):
+def speed_for_time_period_table(timedelta_str, host, _):
     if host == ALL:
         host = None
 
@@ -195,14 +196,14 @@ def speed_updater(timedelta_str, host, _):
     data = datareader(connected_at_min=start_date, host=host)
 
     users = (
-        data[[USER]]
+        data[[HOST, USER]]
         .drop_duplicates()
         .reset_index(drop=True)
-        .sort_values(USER)
+        .sort_values([HOST, USER])
     )
 
-    received = data.groupby(USER)[RECEIVED].sum().reset_index()
-    sent = data.groupby(USER)[SENT].sum().reset_index()
+    received = data.groupby([HOST, USER])[RECEIVED].sum().reset_index()
+    sent = data.groupby([HOST, USER])[SENT].sum().reset_index()
 
     if timedelta is not None:
         seconds = timedelta.total_seconds()
@@ -217,8 +218,8 @@ def speed_updater(timedelta_str, host, _):
 
     users = (
         users
-        .merge(received, how="left", on="user")
-        .merge(sent, how="left", on="user")
+        .merge(received, how="left", on=[HOST, USER])
+        .merge(sent, how="left", on=[HOST, USER])
     )
 
     return users.to_dict("records")
@@ -229,7 +230,7 @@ def speed_updater(timedelta_str, host, _):
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
 )
-def users_updater(host, _):
+def active_users_table(host, _):
     if host == ALL:
         host = None
     data = datareader(
@@ -247,7 +248,7 @@ def users_updater(host, _):
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
 )
-def update_sent_graph(host, _):
+def closed_sessions_table(host, _):
     if host == ALL:
         host = None
     sessions = sessionreader(host=host, limit=20)
