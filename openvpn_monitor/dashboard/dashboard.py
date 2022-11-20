@@ -59,7 +59,8 @@ app.layout = html.Div(
                         dcc.Dropdown(
                             id=TIME_PERIOD_SELECTOR,
                             options=list(TIMEDELTAS.keys()),
-                            placeholder="Select time period"
+                            placeholder="Select time period",
+                            value="inf",
                         ),
                     ],
                     style={'padding': 10, 'flex': 1}
@@ -67,7 +68,11 @@ app.layout = html.Div(
                 html.Div(
                     children=[
                         html.H4(children="Hosts"),
-                        dcc.Dropdown(id=HOST_SELECTOR, placeholder="Select OpenVPN server"),
+                        dcc.Dropdown(
+                            id=HOST_SELECTOR,
+                            placeholder="Select OpenVPN server",
+                            value=ALL
+                        ),
                     ],
                     style={'padding': 10, 'flex': 1}
                 ),
@@ -121,10 +126,7 @@ app.layout = html.Div(
     Input(TIMER, "n_intervals"),
 )
 def all_hosts_update(timedelta_str, _):
-    if timedelta_str is not None:
-        timedelta = TIMEDELTAS[timedelta_str]
-    else:
-        timedelta = None
+    timedelta = TIMEDELTAS[timedelta_str]
     return [ALL] + hostsreader(timedelta=timedelta)
 
 
