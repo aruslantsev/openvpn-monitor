@@ -121,7 +121,10 @@ app.layout = html.Div(
     Input(TIMER, "n_intervals"),
 )
 def all_hosts_update(timedelta_str, _):
-    timedelta = TIMEDELTAS[timedelta_str]
+    if timedelta_str is not None:
+        timedelta = TIMEDELTAS[timedelta_str]
+    else:
+        timedelta = None
     return [ALL] + hostsreader(timedelta=timedelta)
 
 
