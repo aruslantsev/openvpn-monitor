@@ -3,6 +3,7 @@ import os
 
 from dash import Dash, html, dcc, dash_table
 from dash.dependencies import Output, Input
+import plotly.express as px
 
 from openvpn_monitor.columns import (
     HOST,
@@ -10,6 +11,7 @@ from openvpn_monitor.columns import (
     SENT,
     RECEIVED,
     TIMESTAMP_START,
+    TIMESTAMP_END,
 )
 from openvpn_monitor.const import TIMEDELTAS, ALL
 from openvpn_monitor.dashboard.functions import (
@@ -33,6 +35,7 @@ hostsreader = OVPNHostsReader(conn_string=connection_string, table=SESSIONS_TABL
 app = Dash(__name__, title="OpenVPN Monitor")
 
 TIMER = "timer"
+TIME_UPDATED = "time_updated"
 TIME_PERIOD_SELECTOR = "time_period_selector"
 HOST_SELECTOR = "host_selector"
 TRAFFIC_SINCE_MONTH_START_TABLE = "traffic_since_month_start_table"
@@ -40,7 +43,10 @@ ACTIVE_USERS_TABLE = "active_users_table"
 TRAFFIC_FOR_TIME_PERIOD_TABLE = "traffic_for_time_period_table"
 SPEED_FOR_TIME_PERIOD_TABLE = "speed_for_time_period_table"
 CLOSED_SESSIONS_TABLE = "closed_sessions_table"
-TIME_UPDATED = "time_updated"
+RECEIVED_GRAPH = "received_graph"
+SENT_GRAPH = "sent_graph"
+
+TIME_DIFF = "time_diff"
 
 app.layout = html.Div(
     children=[
@@ -133,6 +139,12 @@ app.layout = html.Div(
         html.H4(children="Latest closed sessions"),
         dash_table.DataTable(id=CLOSED_SESSIONS_TABLE),
         html.Br(),
+
+        html.H4(children="Received speed"),
+        dcc.Graph(id=RECEIVED_GRAPH),
+
+        html.H4(children="Sent speed"),
+        dcc.Graph(id=SENT_GRAPH),
     ]
 )
 
@@ -152,7 +164,25 @@ def all_hosts_update(timedelta_str, _):
     Input(TIMER, "n_intervals"),
 )
 def time_update(_):
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return f"""Last update: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
+
+
+@app.callback(
+    Output(ACTIVE_USERS_TABLE, "data"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
+)
+def active_users_table(host, _):
+    if host == ALL:
+        host = None
+    data = datareader(
+        host=host,
+        connected_at_min=datetime.datetime.now() - datetime.timedelta(minutes=5)
+    )
+    users = data[[USER, HOST]].drop_duplicates()
+    users = users[users[USER] != ALL].reset_index(drop=True)
+
+    return users.to_dict("records")
 
 
 @app.callback(
@@ -280,24 +310,6 @@ def speed_for_time_period_table(timedelta_str, host, _):
 
 
 @app.callback(
-    Output(ACTIVE_USERS_TABLE, "data"),
-    Input(HOST_SELECTOR, "value"),
-    Input(TIMER, "n_intervals"),
-)
-def active_users_table(host, _):
-    if host == ALL:
-        host = None
-    data = datareader(
-        host=host,
-        connected_at_min=datetime.datetime.now() - datetime.timedelta(minutes=5)
-    )
-    users = data[[USER, HOST]].drop_duplicates()
-    users = users[users[USER] != ALL].reset_index(drop=True)
-
-    return users.to_dict("records")
-
-
-@app.callback(
     Output(CLOSED_SESSIONS_TABLE, "data"),
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
@@ -309,3 +321,55 @@ def closed_sessions_table(host, _):
     sessions = get_sess_data(sessions)
 
     return sessions.to_dict("records")
+
+
+@app.callback(
+    Output(RECEIVED_GRAPH, "data"),
+    Input(TIME_PERIOD_SELECTOR, "value"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
+)
+def received_graph(timedelta_str, host, _):
+    if host == ALL:
+        host = None
+
+    curr_date = datetime.datetime.now()
+    timedelta = TIMEDELTAS[timedelta_str]
+    if timedelta is not None:
+        start_date = curr_date - TIMEDELTAS[timedelta_str]
+    else:
+        start_date = None
+
+    data = datareader(connected_at_min=start_date, host=host)
+    data[TIME_DIFF] = data[TIMESTAMP_END] - data[TIMESTAMP_START]
+    data[RECEIVED] = data[RECEIVED] / data[TIME_DIFF]
+    data[SENT] = data[SENT] / data[TIME_DIFF]
+
+    graph = px.line(data, x=TIMESTAMP_START, y=RECEIVED, color=[USER, HOST])
+    return graph
+
+
+@app.callback(
+    Output(SENT_GRAPH, "data"),
+    Input(TIME_PERIOD_SELECTOR, "value"),
+    Input(HOST_SELECTOR, "value"),
+    Input(TIMER, "n_intervals"),
+)
+def sent_graph(timedelta_str, host, _):
+    if host == ALL:
+        host = None
+
+    curr_date = datetime.datetime.now()
+    timedelta = TIMEDELTAS[timedelta_str]
+    if timedelta is not None:
+        start_date = curr_date - TIMEDELTAS[timedelta_str]
+    else:
+        start_date = None
+
+    data = datareader(connected_at_min=start_date, host=host)
+    data[TIME_DIFF] = data[TIMESTAMP_END] - data[TIMESTAMP_START]
+    data[RECEIVED] = data[RECEIVED] / data[TIME_DIFF]
+    data[SENT] = data[SENT] / data[TIME_DIFF]
+
+    graph = px.line(data, x=TIMESTAMP_START, y=SENT, color=[USER, HOST])
+    return graph
