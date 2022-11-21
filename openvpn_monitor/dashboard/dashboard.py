@@ -324,7 +324,7 @@ def closed_sessions_table(host, _):
 
 
 @app.callback(
-    Output(RECEIVED_GRAPH, "data"),
+    Output(RECEIVED_GRAPH, "figure"),
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
@@ -351,7 +351,7 @@ def received_graph(timedelta_str, host, _):
 
 
 @app.callback(
-    Output(SENT_GRAPH, "data"),
+    Output(SENT_GRAPH, "figure"),
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
