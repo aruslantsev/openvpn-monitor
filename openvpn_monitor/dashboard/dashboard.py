@@ -344,8 +344,9 @@ def received_graph(timedelta_str, host, _):
     data[TIME_DIFF] = data[TIMESTAMP_END] - data[TIMESTAMP_START]
     data[RECEIVED] = data[RECEIVED] / data[TIME_DIFF]
     data[SENT] = data[SENT] / data[TIME_DIFF]
+    data[USER + HOST] = data[USER] + data[HOST]
 
-    graph = px.line(data, x=TIMESTAMP_START, y=RECEIVED, color=[USER, HOST])
+    graph = px.line(data, x=TIMESTAMP_START, y=RECEIVED, color=USER + HOST)
     return graph
 
 
@@ -370,6 +371,7 @@ def sent_graph(timedelta_str, host, _):
     data[TIME_DIFF] = data[TIMESTAMP_END] - data[TIMESTAMP_START]
     data[RECEIVED] = data[RECEIVED] / data[TIME_DIFF]
     data[SENT] = data[SENT] / data[TIME_DIFF]
+    data[USER + HOST] = data[USER] + data[HOST]
 
-    graph = px.line(data, x=TIMESTAMP_START, y=SENT, color=[USER, HOST])
+    graph = px.line(data, x=TIMESTAMP_START, y=SENT, color=USER + HOST)
     return graph
