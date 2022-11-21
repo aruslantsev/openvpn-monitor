@@ -40,6 +40,7 @@ ACTIVE_USERS_TABLE = "active_users_table"
 TRAFFIC_FOR_TIME_PERIOD_TABLE = "traffic_for_time_period_table"
 SPEED_FOR_TIME_PERIOD_TABLE = "speed_for_time_period_table"
 CLOSED_SESSIONS_TABLE = "closed_sessions_table"
+TIME_UPDATED = "time_updated"
 
 app.layout = html.Div(
     children=[
@@ -50,6 +51,8 @@ app.layout = html.Div(
 
         html.H3(children='OpenVPN monitoring'),
         html.Br(),
+
+        html.Div(id=TIME_UPDATED),
 
         html.Div(
             children=[
@@ -118,7 +121,6 @@ app.layout = html.Div(
             cell_selectable=False,
             # fill_width=False,
         ),
-        html.Br(),
 
         html.H4(children="Average speed"),
         dash_table.DataTable(
@@ -143,6 +145,14 @@ app.layout = html.Div(
 def all_hosts_update(timedelta_str, _):
     timedelta = TIMEDELTAS[timedelta_str]
     return [ALL] + hostsreader(timedelta=timedelta)
+
+
+@app.callback(
+    Output(TIME_UPDATED, "children"),
+    Input(TIMER, "n_intervals"),
+)
+def time_update(_):
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 @app.callback(
