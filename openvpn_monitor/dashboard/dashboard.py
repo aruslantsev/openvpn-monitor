@@ -47,6 +47,7 @@ RECEIVED_GRAPH = "received_graph"
 SENT_GRAPH = "sent_graph"
 
 TIME_DIFF = "time_diff"
+COLOR_ID = USER + ' ' + HOST
 
 app.layout = html.Div(
     children=[
@@ -341,12 +342,16 @@ def received_graph(timedelta_str, host, _):
         start_date = None
 
     data = datareader(connected_at_min=start_date, host=host)
+    data = data[data[USER] != ALL]
     data[TIME_DIFF] = data[TIMESTAMP_END] - data[TIMESTAMP_START]
     data[RECEIVED] = data[RECEIVED] / data[TIME_DIFF]
     data[SENT] = data[SENT] / data[TIME_DIFF]
-    data[USER + HOST] = data[USER] + data[HOST]
+    data[COLOR_ID] = data[USER] + ' ' + data[HOST]
+    data[TIMESTAMP_START] = data[TIMESTAMP_START].apply(
+        lambda d: datetime.datetime.fromtimestamp(d)
+    )
 
-    graph = px.line(data, x=TIMESTAMP_START, y=RECEIVED, color=USER + HOST)
+    graph = px.line(data, x=TIMESTAMP_START, y=RECEIVED, color=COLOR_ID)
     return graph
 
 
@@ -368,10 +373,14 @@ def sent_graph(timedelta_str, host, _):
         start_date = None
 
     data = datareader(connected_at_min=start_date, host=host)
+    data = data[data[USER] != ALL]
     data[TIME_DIFF] = data[TIMESTAMP_END] - data[TIMESTAMP_START]
     data[RECEIVED] = data[RECEIVED] / data[TIME_DIFF]
     data[SENT] = data[SENT] / data[TIME_DIFF]
-    data[USER + HOST] = data[USER] + data[HOST]
+    data[COLOR_ID] = data[USER] + ' ' + data[HOST]
+    data[TIMESTAMP_START] = data[TIMESTAMP_START].apply(
+        lambda d: datetime.datetime.fromtimestamp(d)
+    )
 
-    graph = px.line(data, x=TIMESTAMP_START, y=SENT, color=USER + HOST)
+    graph = px.line(data, x=TIMESTAMP_START, y=SENT, color=COLOR_ID)
     return graph
