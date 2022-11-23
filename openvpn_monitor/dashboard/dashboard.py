@@ -351,7 +351,7 @@ def received_graph(timedelta_str, host, _):
         lambda d: datetime.datetime.fromtimestamp(d)
     )
 
-    graph = px.bar(data, x=TIMESTAMP_START, y=RECEIVED, color=COLOR_ID, opacity=0.9)
+    graph = px.bar(data, x=TIMESTAMP_START, y=RECEIVED, color=COLOR_ID)
     return graph
 
 
@@ -382,5 +382,5 @@ def sent_graph(timedelta_str, host, _):
         lambda d: datetime.datetime.fromtimestamp(d)
     )
 
-    graph = px.bar(data, x=TIMESTAMP_START, y=SENT, color=COLOR_ID, opacity=0.9)
+    graph = px.bar(data, x=TIMESTAMP_START, y=SENT, color=COLOR_ID)
     return graph
