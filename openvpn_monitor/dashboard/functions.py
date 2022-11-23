@@ -2,18 +2,27 @@ import datetime
 
 import pandas as pd
 
+from openvpn_monitor.columns import (
+    HOST,
+    USER,
+    IP,
+    CONNECTED_AT,
+    CLOSED_AT,
+    RECEIVED,
+    SENT,
+)
 from openvpn_monitor.const import DATA_SPEEDS, DATA_SIZES
 
 
 def get_sess_data(data: pd.DataFrame) -> pd.DataFrame:
-    data = data[['user', 'ip', 'connected_at', 'closed_at', 'received', 'sent', ]].copy()
-    data['connected_at'] = data['connected_at'].map(datetime.datetime.fromtimestamp)
-    data['connected_at'] = data['connected_at'].map(lambda x: x.strftime("%Y-%m-%d %H:%M"))
-    data['closed_at'] = data['closed_at'].map(datetime.datetime.fromtimestamp)
-    data['closed_at'] = data['closed_at'].map(lambda x: x.strftime("%Y-%m-%d %H:%M"))
-    data['received'] = data['received'].map(bytes_to_str)
-    data['sent'] = data['sent'].map(bytes_to_str)
-    return data
+    data = data.copy()
+    data[CONNECTED_AT] = data[CONNECTED_AT].map(datetime.datetime.fromtimestamp)
+    data[CONNECTED_AT] = data[CONNECTED_AT].map(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+    data[CLOSED_AT] = data[CLOSED_AT].map(datetime.datetime.fromtimestamp)
+    data[CLOSED_AT] = data[CLOSED_AT].map(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+    data[RECEIVED] = data[RECEIVED].map(bytes_to_str)
+    data[SENT] = data[SENT].map(bytes_to_str)
+    return data[[HOST, USER, IP, CONNECTED_AT, CLOSED_AT, RECEIVED, SENT, ]]
 
 
 def bytes_to_str(x):

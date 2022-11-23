@@ -78,7 +78,7 @@ class OVPNDataReader:
         if host is not None or connected_at_min is not None:
             query += f""" WHERE """
             if host is not None:
-                query += f""" {HOST} == {host} """
+                query += f""" {HOST} = {host} """
             if host is not None and connected_at_min is not None:
                 query += """ AND """
             if connected_at_min is not None:
@@ -129,7 +129,7 @@ class OVPNSessionsReader:
         if host is not None or connected_at_min is not None:
             query += f""" WHERE """
             if host is not None:
-                query += f""" {HOST} == {host} """
+                query += f""" {HOST} = {host} """
             if host is not None and connected_at_min is not None:
                 query += """ AND """
             if connected_at_min is not None:
