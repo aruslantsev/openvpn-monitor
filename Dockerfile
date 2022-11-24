@@ -6,8 +6,9 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache -r /app/requirements.txt
 
-COPY *.py /app/
+COPY . .
 
+ENV PYTHONPATH=.
 ENTRYPOINT ["dumb-init"] 
-CMD ["python", "-u", "/app/monitor.py"]
+CMD ["python", "-u", "openvpn_monitor/run.py"]
 EXPOSE 8888

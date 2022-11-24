@@ -1,0 +1,6 @@
+mysqlclient==2.1.1
+sqlalchemy==1.4.44
+dash==2.7.0
+pandas==1.5.1
+plotly==5.11.0
+PyYAML==6.0

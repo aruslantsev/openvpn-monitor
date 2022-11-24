@@ -1,0 +1,7 @@
+hosts:
+  vdsina-gw0:
+    host: 127.0.0.1
+    monitoring_port: 7505
+  vdsina-gw1:
+    host: 127.0.0.1
+    monitoring_port: 7506
