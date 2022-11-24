@@ -13,7 +13,7 @@ from openvpn_monitor.columns import (
     TIMESTAMP_START,
     TIMESTAMP_END,
 )
-from openvpn_monitor.const import TIMEDELTAS, ALL
+from openvpn_monitor.const import TIMEDELTAS, ALL, INF
 from openvpn_monitor.dashboard.functions import (
     bytes_to_str,
     speed_to_str,
@@ -70,7 +70,7 @@ app.layout = html.Div(
                             id=TIME_PERIOD_SELECTOR,
                             options=list(TIMEDELTAS.keys()),
                             placeholder="Select time period",
-                            value="inf",
+                            value=INF,
                             clearable=False,
                         ),
                     ],

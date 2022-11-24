@@ -1,6 +1,7 @@
 import datetime
 
 ALL = "__ALL__"
+INF = "inf"
 
 TIMEDELTAS = {
     "15 minutes": datetime.timedelta(minutes=15),
@@ -16,7 +17,7 @@ TIMEDELTAS = {
     "90 days": datetime.timedelta(days=90),
     "180 days": datetime.timedelta(days=180),
     "365 days": datetime.timedelta(days=365),
-    "inf": None,
+    INF: None,
 }
 
 DATA_SIZES = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"]
