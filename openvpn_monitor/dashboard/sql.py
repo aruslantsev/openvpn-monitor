@@ -2,10 +2,9 @@ import datetime
 from typing import List, Optional
 
 import pandas as pd
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+import mysql.connector
 
-from openvpn_monitor.columns import (
+from openvpn_monitor.constraints.columns import (
     HOST,
     USER,
     IP,

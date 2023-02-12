@@ -3,12 +3,16 @@ import telnetlib
 import time
 from typing import List, Dict, Tuple
 
-from openvpn_monitor.columns import RECEIVED, SENT
-from openvpn_monitor.const import ALL
+from openvpn_monitor.constraints.columns import RECEIVED, SENT
+from openvpn_monitor.constraints.const import ALL
 from openvpn_monitor.monitoring.data import SessionData, SessionBytes
 
 
 class OVPNMonitor(multiprocessing.Process):
+    """
+    This class must have only one instance on OpenVPN server.
+    It collects data and puts it into queues
+    """
     def __init__(
         self,
         *,
@@ -29,7 +33,7 @@ class OVPNMonitor(multiprocessing.Process):
         self.interval = interval
         self.timeout = timeout
 
-    def status(
+    def status_raw(
         self,
     ) -> List[str]:
         try:
@@ -60,9 +64,9 @@ class OVPNMonitor(multiprocessing.Process):
     def status_parsed(
         self
     ) -> Tuple[int, Dict[str, SessionData]]:
-        status = self.status()
+        status = self.status_raw()
         stats = {}
-        timestamp = int(time.time())
+        timestamp = int(time.time())  # TODO: check and replace with datetime
         for line in status:
             # CLIENT_LIST,Common Name,Real Address,Virtual Address,Virtual IPv6 Address,
             # Bytes Received,Bytes Sent,Connected Since,Connected Since (time_t),Username,
@@ -97,51 +101,60 @@ class OVPNMonitor(multiprocessing.Process):
             start = time.time()
             timestamp_prev, status_prev = timestamp, status
             timestamp, status = self.status_parsed()
-            expired_sessions = [
+            # Closed sessions
+            closed_sessions = [
                 sess_id for sess_id in status_prev if sess_id not in status
             ]
-            active_sessions = [
-                sess_id for sess_id in status_prev if sess_id in status
-            ]
+            # Active sessions
+            active_sessions = [sess_id for sess_id in status]
 
-            for sess in expired_sessions:
+            for sess in closed_sessions:
                 status_prev[sess].closed_at = timestamp_prev
-                self.sessions_queue.put(status_prev[sess])
+                self.sessions_queue.put(
+                    status_prev[sess],  # OpenVPN returns total values
+                    block=True,  # Wait for the free slot
+                )
 
-            user_dw_data = {'__ALL__': {SENT: 0, RECEIVED: 0}}
+            user_dw_data = {ALL: {SENT: 0, RECEIVED: 0}}
             for sess in active_sessions:
+                # Each session should appear only once in server logs, but who knows...
                 if status[sess].user not in user_dw_data:
                     user_dw_data[status[sess].user] = {SENT: 0, RECEIVED: 0}
-                if sess in status_prev:
+                if sess in status_prev:  # old but still active session
                     user_sent = status[sess].sent - status_prev[sess].sent
                     user_received = status[sess].received - status_prev[sess].received
-                else:
+                else:  # new session
                     user_sent = status[sess].sent
                     user_received = status[sess].received
+                # Again, should appear only once. This is user stats only for current server
                 user_dw_data[status[sess].user][SENT] += user_sent
                 user_dw_data[status[sess].user][RECEIVED] += user_received
 
+                # Overall data transfer stats for current server
                 user_dw_data[ALL][SENT] += user_sent
                 user_dw_data[ALL][RECEIVED] += user_received
 
             if (
-                    (user_dw_data[ALL]['sent'] != 0)
-                    or (user_dw_data[ALL]['received'] != 0)
-            ):
+                len(user_dw_data) > 1
+            ) or (
+                    (user_dw_data[ALL][SENT] != 0)
+                    or (user_dw_data[ALL][RECEIVED] != 0)
+            ):  # not only ALL keyword or any amount of data
                 self.data_queue.put(
                     SessionBytes(
                         host=self.host_alias,
                         timestamp_start=timestamp_prev,
                         timestamp_end=timestamp,
                         data=user_dw_data,
-                    )
+                    ),
+                    block=True  # Wait for the free slot
                 )
 
             time_wait = self.interval - (time.time() - start)
             if time_wait > 0:
                 time.sleep(time_wait)
             else:
-                print('Not enough time to collect stats', flush=True)
+                print("Not enough time to collect stats", flush=True)
 
 
 class SimpleReader:

@@ -7,8 +7,8 @@ import yaml
 
 from openvpn_monitor.monitoring.monitor import monitor
 
-from openvpn_monitor.tables import SESSIONS_TABLE, DATA_TABLE
-from openvpn_monitor.dashboard.dashboard import app
+from openvpn_monitor.constraints.tables import SESSIONS_TABLE, DATA_TABLE
+from openvpn_monitor.dashboard.dashboard import dashboard
 
 
 def main():
@@ -38,7 +38,7 @@ def main():
 
     processes.append(
         multiprocessing.Process(
-            target=app.run_server,
+            target=dashboard.run_server,
             name="webserver",
             kwargs={
                 "host": "0.0.0.0",

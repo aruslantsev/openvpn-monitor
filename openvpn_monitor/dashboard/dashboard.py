@@ -1,30 +1,33 @@
 import datetime
 import os
 
+import pandas as pd
 import plotly.express as px
 from dash import Dash, html, dcc, dash_table
 from dash.dependencies import Output, Input
 
-from openvpn_monitor.columns import (
+from openvpn_monitor.constraints.columns import (
     HOST,
     USER,
     SENT,
     RECEIVED,
     TIMESTAMP_START,
     TIMESTAMP_END,
+    CONNECTED_AT,
+    CLOSED_AT,
+    IP,
 )
-from openvpn_monitor.const import TIMEDELTAS, ALL, INF
+from openvpn_monitor.constraints.const import TIMEDELTAS, ALL, INF
+from openvpn_monitor.constraints.tables import DATA_TABLE, SESSIONS_TABLE
 from openvpn_monitor.dashboard.functions import (
     bytes_to_str,
     speed_to_str,
-    get_sess_data,
 )
 from openvpn_monitor.dashboard.sql import (
     OVPNDataReader,
     OVPNSessionsReader,
     OVPNHostsReader,
 )
-from openvpn_monitor.tables import DATA_TABLE, SESSIONS_TABLE
 
 connection_string = os.environ['CONNECTION_STRING']
 
@@ -32,7 +35,6 @@ datareader = OVPNDataReader(conn_string=connection_string, table=DATA_TABLE)
 sessionreader = OVPNSessionsReader(conn_string=connection_string, table=SESSIONS_TABLE)
 hostsreader = OVPNHostsReader(conn_string=connection_string, table=SESSIONS_TABLE)
 
-app = Dash(__name__, title="OpenVPN Monitor")
 
 TIMER = "timer"
 TIME_UPDATED = "time_updated"
@@ -49,7 +51,21 @@ SENT_GRAPH = "sent_graph"
 TIME_DIFF = "time_diff"
 COLOR_ID = USER + ' ' + HOST
 
-app.layout = html.Div(
+
+def get_sess_data(data: pd.DataFrame) -> pd.DataFrame:
+    data = data.copy()
+    data[CONNECTED_AT] = data[CONNECTED_AT].map(datetime.datetime.fromtimestamp)
+    data[CONNECTED_AT] = data[CONNECTED_AT].map(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+    data[CLOSED_AT] = data[CLOSED_AT].map(datetime.datetime.fromtimestamp)
+    data[CLOSED_AT] = data[CLOSED_AT].map(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+    data[RECEIVED] = data[RECEIVED].map(bytes_to_str)
+    data[SENT] = data[SENT].map(bytes_to_str)
+    return data[[HOST, USER, IP, CONNECTED_AT, CLOSED_AT, RECEIVED, SENT, ]]
+
+
+dashboard = Dash(__name__, title="OpenVPN Monitor")
+
+dashboard.layout = html.Div(
     children=[
         dcc.Interval(
             id=TIMER,
@@ -150,7 +166,7 @@ app.layout = html.Div(
 )
 
 
-@app.callback(
+@dashboard.callback(
     Output(HOST_SELECTOR, "options"),
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
@@ -160,7 +176,7 @@ def all_hosts_update(timedelta_str, _):
     return [ALL] + hostsreader(timedelta=timedelta)
 
 
-@app.callback(
+@dashboard.callback(
     Output(TIME_UPDATED, "children"),
     Input(TIMER, "n_intervals"),
 )
@@ -168,7 +184,7 @@ def time_update(_):
     return f"""Last update: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
 
 
-@app.callback(
+@dashboard.callback(
     Output(ACTIVE_USERS_TABLE, "data"),
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
@@ -186,7 +202,7 @@ def active_users_table(host, _):
     return users.to_dict("records")
 
 
-@app.callback(
+@dashboard.callback(
     Output(TRAFFIC_SINCE_MONTH_START_TABLE, "data"),
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
@@ -221,7 +237,7 @@ def traffic_since_month_start_table(host, _):
     return users.to_dict("records")
 
 
-@app.callback(
+@dashboard.callback(
     Output(TRAFFIC_FOR_TIME_PERIOD_TABLE, "data"),
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(HOST_SELECTOR, "value"),
@@ -261,7 +277,7 @@ def traffic_for_time_period_table(timedelta_str, host, _):
     return users.to_dict("records")
 
 
-@app.callback(
+@dashboard.callback(
     Output(SPEED_FOR_TIME_PERIOD_TABLE, "data"),
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(HOST_SELECTOR, "value"),
@@ -310,7 +326,7 @@ def speed_for_time_period_table(timedelta_str, host, _):
     return users.to_dict("records")
 
 
-@app.callback(
+@dashboard.callback(
     Output(CLOSED_SESSIONS_TABLE, "data"),
     Input(HOST_SELECTOR, "value"),
     Input(TIMER, "n_intervals"),
@@ -324,7 +340,7 @@ def closed_sessions_table(host, _):
     return sessions.to_dict("records")
 
 
-@app.callback(
+@dashboard.callback(
     Output(RECEIVED_GRAPH, "figure"),
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(HOST_SELECTOR, "value"),
@@ -355,7 +371,7 @@ def received_graph(timedelta_str, host, _):
     return graph
 
 
-@app.callback(
+@dashboard.callback(
     Output(SENT_GRAPH, "figure"),
     Input(TIME_PERIOD_SELECTOR, "value"),
     Input(HOST_SELECTOR, "value"),
