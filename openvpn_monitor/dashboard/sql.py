@@ -1,8 +1,10 @@
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 
-import pandas as pd
 import mysql.connector
+import pandas as pd
+import pypika
+from pypika import Query, Order
 
 from openvpn_monitor.constraints.columns import (
     HOST,
@@ -21,27 +23,26 @@ from openvpn_monitor.constraints.columns import (
 class OVPNHostsReader:
     def __init__(
         self,
-        conn_string: str,
-        table: str,
+        mysql_creds: Dict[str, str],
+        table: pypika.Table,
     ):
-        self.conn_string = conn_string
+        self.creds = mysql_creds
         self.table = table
-
-        self.engine = create_engine(self.conn_string, pool_recycle=1800)
 
     def __call__(
         self,
         timedelta: Optional[datetime.timedelta] = None
     ) -> List[str]:
-        query = f"""SELECT DISTINCT {HOST} FROM {self.table} """
+        query = Query.from_(self.table).select(HOST).distinct()
 
         if timedelta is not None:
             min_timestamp = (datetime.datetime.now() - timedelta).timestamp()
-            query += f""" WHERE {CONNECTED_AT} >= {min_timestamp} """
+            query = query.where(self.table[CONNECTED_AT] >= min_timestamp)
 
-        with Session(self.engine) as session:
-            result = session.execute(query).fetchall()
-
+        connection = mysql.connector.connect(**self.creds, database=None)
+        cursor = connection.cursor()
+        cursor.execute(query.get_sql())
+        result = cursor.fetchall()
         result = sorted(row[0] for row in result)
 
         return result
@@ -50,13 +51,12 @@ class OVPNHostsReader:
 class OVPNDataReader:
     def __init__(
         self,
-        conn_string: str,
-        table: str,
+        mysql_creds: Dict[str, str],
+        table: pypika.Table,
     ):
-        self.conn_string = conn_string
+        self.creds = mysql_creds
         self.table = table
-
-        self.engine = create_engine(self.conn_string, pool_recycle=1800)
+        self.columns = [HOST, TIMESTAMP_START, TIMESTAMP_END, USER, RECEIVED, SENT]
 
     def __call__(
         self,
@@ -64,47 +64,34 @@ class OVPNDataReader:
         connected_at_min: Optional[datetime.datetime] = None,
         limit: Optional[int] = None,
     ) -> pd.DataFrame:
-        query = (
-            f"""SELECT 
-                    {HOST},
-                    {TIMESTAMP_START}, 
-                    {TIMESTAMP_END}, 
-                    {USER}, 
-                    {RECEIVED},
-                    {SENT} 
-                FROM {self.table} """
-        )
-        if host is not None or connected_at_min is not None:
-            query += f""" WHERE """
-            if host is not None:
-                query += f""" {HOST} = '{host}' """
-            if host is not None and connected_at_min is not None:
-                query += """ AND """
-            if connected_at_min is not None:
-                query += f""" {TIMESTAMP_START} >= {connected_at_min.timestamp()} """
-        query += f""" ORDER BY {TIMESTAMP_START} DESC """
+        query = Query.from_(self.table).select(*self.columns)
+
+        if host is not None:
+            query = query.where(self.table[HOST] == host)
+        if connected_at_min is not None:
+            query = query.where(self.table[TIMESTAMP_START] >= connected_at_min.timestamp())
+
+        query = query.orderby(TIMESTAMP_START, order=Order.desc)
         if limit is not None:
-            query += f""" LIMIT {limit} """
+            query = query.limit(limit)
 
-        with Session(self.engine) as session:
-            result = session.execute(query).fetchall()
+        connection = mysql.connector.connect(**self.creds, database=None)
+        cursor = connection.cursor()
+        cursor.execute(query.get_sql())
+        result = cursor.fetchall()
 
-        return pd.DataFrame(
-            result,
-            columns=[HOST, TIMESTAMP_START, TIMESTAMP_END, USER, RECEIVED, SENT, ]
-        )
+        return pd.DataFrame(result, columns=self.columns)
 
 
 class OVPNSessionsReader:
     def __init__(
         self,
-        conn_string: str,
-        table: str,
+        mysql_creds: Dict[str, str],
+        table: pypika.Table,
     ):
-        self.conn_string = conn_string
+        self.creds = mysql_creds
         self.table = table
-
-        self.engine = create_engine(self.conn_string, pool_recycle=1800)
+        self.columns = [HOST, USER, IP, INTERNAL_IP, RECEIVED, SENT, CONNECTED_AT, CLOSED_AT, ]
 
     def __call__(
         self,
@@ -112,35 +99,20 @@ class OVPNSessionsReader:
         connected_at_min: Optional[datetime.datetime] = None,
         limit: Optional[int] = None,
     ):
-        # engine = create_engine(self.conn_string, pool_recycle=1800)
-        query = (
-            f"""SELECT 
-                    {HOST},
-                    {USER}, 
-                    {IP}, 
-                    {INTERNAL_IP}, 
-                    {RECEIVED}, 
-                    {SENT}, 
-                    {CONNECTED_AT}, 
-                    {CLOSED_AT}
-                FROM {self.table} """
-        )
-        if host is not None or connected_at_min is not None:
-            query += f""" WHERE """
-            if host is not None:
-                query += f""" {HOST} = '{host}' """
-            if host is not None and connected_at_min is not None:
-                query += """ AND """
-            if connected_at_min is not None:
-                query += f""" {TIMESTAMP_START} >= {connected_at_min.timestamp()} """
-        query += f""" ORDER BY {CONNECTED_AT} DESC """
+        query = Query.from_(self.table).select(*self.columns)
+
+        if host is not None:
+            query = query.where(self.table[HOST] == host)
+        if connected_at_min is not None:
+            query = query.where(self.table[TIMESTAMP_START] >= connected_at_min.timestamp())
+
+        query = query.orderby(CONNECTED_AT, order=Order.desc)
         if limit is not None:
-            query += f""" LIMIT {limit} """
+            query = query.limit(limit)
 
-        with Session(self.engine) as session:
-            result = session.execute(query).fetchall()
+        connection = mysql.connector.connect(**self.creds, database=None)
+        cursor = connection.cursor()
+        cursor.execute(query.get_sql())
+        result = cursor.fetchall()
 
-        return pd.DataFrame(
-            result,
-            columns=[HOST, USER, IP, INTERNAL_IP, RECEIVED, SENT, CONNECTED_AT, CLOSED_AT, ]
-        )
+        return pd.DataFrame(result, columns=self.columns)

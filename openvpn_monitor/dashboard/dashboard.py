@@ -29,12 +29,6 @@ from openvpn_monitor.dashboard.sql import (
     OVPNHostsReader,
 )
 
-connection_string = os.environ['CONNECTION_STRING']
-
-datareader = OVPNDataReader(conn_string=connection_string, table=DATA_TABLE)
-sessionreader = OVPNSessionsReader(conn_string=connection_string, table=SESSIONS_TABLE)
-hostsreader = OVPNHostsReader(conn_string=connection_string, table=SESSIONS_TABLE)
-
 
 TIMER = "timer"
 TIME_UPDATED = "time_updated"
@@ -62,6 +56,12 @@ def get_sess_data(data: pd.DataFrame) -> pd.DataFrame:
     data[SENT] = data[SENT].map(bytes_to_str)
     return data[[HOST, USER, IP, CONNECTED_AT, CLOSED_AT, RECEIVED, SENT, ]]
 
+
+connection_string = os.environ['CONNECTION_STRING']
+
+datareader = OVPNDataReader(mysql_creds=connection_string, table=DATA_TABLE)
+sessionreader = OVPNSessionsReader(mysql_creds=connection_string, table=SESSIONS_TABLE)
+hostsreader = OVPNHostsReader(mysql_creds=connection_string, table=SESSIONS_TABLE)
 
 dashboard = Dash(__name__, title="OpenVPN Monitor")
 
