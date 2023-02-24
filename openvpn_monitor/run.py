@@ -3,20 +3,32 @@ import os
 import sys
 import time
 
+import pypika
 import yaml
 
 from openvpn_monitor.monitoring.monitor import monitor
 
-from openvpn_monitor.constraints.tables import SESSIONS_TABLE, DATA_TABLE
-from openvpn_monitor.dashboard.dashboard import dashboard
+from openvpn_monitor.dashboard.dashboard import get_dashboard
+
+SCHEMA = "ovpnmonitor"
+DATA_TABLE = "data"
+SESSIONS_TABLE = "sessions"
 
 
 def main():
     with open("/config.yaml") as fd:
         config = yaml.safe_load(fd)
-    connection_string = os.environ["CONNECTION_STRING"]
     interval = int(os.environ.get("INTERVAL", "60"))
     timeout = int(os.environ.get("TIMEOUT", "5"))
+
+    data_table = pypika.Table(DATA_TABLE, schema=SCHEMA)
+    sessions_table = pypika.Table(SESSIONS_TABLE, schema=SCHEMA)
+    mysql_creds = {
+        "host": os.environ["MYSQL_HOST"],
+        "port": int(os.environ["MYSQL_PORT"]),
+        "user": os.environ["MYSQL_USER"],
+        "database": None,
+    }
 
     processes = []
 
@@ -27,13 +39,19 @@ def main():
             name="monitor",
             kwargs={
                 "hosts": config["hosts"],
-                "connection_string": connection_string,
-                "data_table": DATA_TABLE,
-                "sessions_table": SESSIONS_TABLE,
+                "connection_string": mysql_creds,
+                "data_table": data_table,
+                "sessions_table": sessions_table,
                 "interval": interval,
                 "timeout": min(timeout, interval),
             }
         )
+    )
+
+    dashboard = get_dashboard(
+        mysql_creds=mysql_creds,
+        data_table=data_table,
+        sessions_table=sessions_table,
     )
 
     processes.append(

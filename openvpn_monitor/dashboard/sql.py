@@ -91,7 +91,7 @@ class OVPNSessionsReader:
     ):
         self.creds = mysql_creds
         self.table = table
-        self.columns = [HOST, USER, IP, INTERNAL_IP, RECEIVED, SENT, CONNECTED_AT, CLOSED_AT, ]
+        self.columns = [HOST, USER, IP, INTERNAL_IP, RECEIVED, SENT, CONNECTED_AT, CLOSED_AT]
 
     def __call__(
         self,

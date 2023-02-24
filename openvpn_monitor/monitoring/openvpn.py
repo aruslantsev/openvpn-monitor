@@ -66,7 +66,7 @@ class OVPNMonitor(multiprocessing.Process):
     ) -> Tuple[int, Dict[str, SessionData]]:
         status = self.status_raw()
         stats = {}
-        timestamp = int(time.time())  # TODO: check and replace with datetime
+        timestamp = int(time.time())
         for line in status:
             # CLIENT_LIST,Common Name,Real Address,Virtual Address,Virtual IPv6 Address,
             # Bytes Received,Bytes Sent,Connected Since,Connected Since (time_t),Username,
