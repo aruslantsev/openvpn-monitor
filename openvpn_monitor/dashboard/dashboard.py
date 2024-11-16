@@ -20,6 +20,7 @@ from openvpn_monitor.constraints.const import TIMEDELTAS, ALL, INF
 from openvpn_monitor.dashboard.functions import bytes_to_str, speed_to_str
 from openvpn_monitor.dashboard.sql import OVPNDataReader, OVPNSessionsReader, OVPNHostsReader
 
+
 TIMER = "timer"
 TIME_UPDATED = "time_updated"
 TIME_PERIOD_SELECTOR = "time_period_selector"
